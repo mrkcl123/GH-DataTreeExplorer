@@ -8,7 +8,10 @@ namespace DataTreeExplorer
 {
     public class DataTreeExplorerComponent : GH_Component, IGH_VariableParameterComponent
     {
-        public List<bool> BranchStates = new List<bool>();
+        // Tracks expanded folder strings (e.g., "Root", "{0}", "{0;1}")
+        public HashSet<string> ExpandedFolders = new HashSet<string> { "Root" };
+        public List<GH_Path> CurrentPaths = new List<GH_Path>();
+        public GH_Structure<IGH_Goo> CurrentTree = new GH_Structure<IGH_Goo>();
 
         public DataTreeExplorerComponent()
           : base("Data Tree Explorer", "TreeExp", "Explores Data Trees like a File Browser", "Sets", "Tree")
@@ -33,10 +36,13 @@ namespace DataTreeExplorer
         {
             GH_Structure<IGH_Goo> inputTree = new GH_Structure<IGH_Goo>();
             
-            // FIX: If no data is connected, or if data is removed, update the UI instead of exiting blindly
             if (!DA.GetDataTree(0, out inputTree) || inputTree.PathCount == 0)
             {
-                BranchStates.Clear();
+                CurrentPaths.Clear();
+                CurrentTree.Clear();
+                ExpandedFolders.Clear();
+                ExpandedFolders.Add("Root");
+                
                 if (Params.Output.Count > 0)
                 {
                     this.OnPingDocument().ScheduleSolution(5, (doc) => {
@@ -47,28 +53,16 @@ namespace DataTreeExplorer
                 return;
             }
 
-            // Sync states up or down to match the new incoming path count
-            if (BranchStates.Count > inputTree.PathCount)
-            {
-                BranchStates.RemoveRange(inputTree.PathCount, BranchStates.Count - inputTree.PathCount);
-            }
-            while (BranchStates.Count < inputTree.PathCount) 
-            {
-                BranchStates.Add(false);
-            }
+            CurrentTree = inputTree.ShallowDuplicate();
+            CurrentPaths = new List<GH_Path>(inputTree.Paths);
 
-            // If parameter count does not match the tree structure, trigger a re-layout pass
-            if (inputTree.PathCount != Params.Output.Count)
-            {
-                this.OnPingDocument().ScheduleSolution(5, (doc) => {
-                    this.VariableParameterMaintenance();
-                    this.ExpireSolution(false);
-                });
-                return;
-            }
+            this.OnPingDocument().ScheduleSolution(5, (doc) => {
+                this.VariableParameterMaintenance();
+                this.ExpireSolution(false);
+            });
 
-            // Assign data safely to the ports
-            for (int i = 0; i < inputTree.PathCount; i++)
+            // Keep physical outputs aligned with the real data branches
+            for (int i = 0; i < Math.Min(Params.Output.Count, inputTree.PathCount); i++)
             {
                 DA.SetDataList(i, inputTree.get_Branch(i));
             }
@@ -81,20 +75,20 @@ namespace DataTreeExplorer
 
         public void VariableParameterMaintenance()
         {
-            // Dynamically build or reduce ports to perfectly match BranchStates
-            while (Params.Output.Count < BranchStates.Count)
+            while (Params.Output.Count < CurrentPaths.Count)
             {
                 Params.RegisterOutputParam(CreateParameter(GH_ParameterSide.Output, Params.Output.Count));
             }
-            while (Params.Output.Count > BranchStates.Count)
+            while (Params.Output.Count > CurrentPaths.Count)
             {
                 Params.UnregisterParameter(Params.Output[Params.Output.Count - 1]);
             }
 
             for (int i = 0; i < Params.Output.Count; i++)
             {
-                Params.Output[i].NickName = "B" + i;
-                Params.Output[i].Name = "Branch " + i;
+                string pathString = CurrentPaths[i].ToString();
+                Params.Output[i].NickName = pathString;
+                Params.Output[i].Name = "Branch " + pathString;
                 Params.Output[i].Access = GH_ParamAccess.list;
                 if (Params.Output[i].Attributes == null) Params.Output[i].CreateAttributes();
             }
