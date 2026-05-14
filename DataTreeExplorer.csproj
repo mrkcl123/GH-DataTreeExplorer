@@ -42,4 +42,10 @@
     <PackageReference Include="System.Drawing.Common" Version="7.0.0" ExcludeAssets="runtime" />
   </ItemGroup>
 
+<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+  <Message Text="Copying GHA to Grasshopper Libraries..." Importance="high" />
+  <Copy SourceFiles="$(TargetDir)$(ProjectName).gha" 
+        DestinationFolder="/Users/mirekclassen/Library/Application Support/McNeel/Rhinoceros/8.0/Plug-ins/Grasshopper (b45a29b1-4343-4035-989e-044e8580d9cf)/Libraries/" />
+</Target>
+
 </Project>

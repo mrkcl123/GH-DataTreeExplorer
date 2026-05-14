@@ -1,0 +1,6 @@
+/Users/mirekclassen/DataTreeExplorer/obj/Debug/net7.0/DataTreeExplorer.csproj.AssemblyReference.cache
+/Users/mirekclassen/DataTreeExplorer/obj/Debug/net7.0/DataTreeExplorer.GeneratedMSBuildEditorConfig.editorconfig
+/Users/mirekclassen/DataTreeExplorer/obj/Debug/net7.0/DataTreeExplorer.AssemblyInfoInputs.cache
+/Users/mirekclassen/DataTreeExplorer/obj/Debug/net7.0/DataTreeExplorer.AssemblyInfo.cs
+/Users/mirekclassen/DataTreeExplorer/obj/Debug/net7.0/DataTreeExplorer.csproj.CoreCompileInputs.cache
+/Users/mirekclassen/DataTreeExplorer/obj/Debug/net7.0/DataTreeExplorer.sourcelink.json

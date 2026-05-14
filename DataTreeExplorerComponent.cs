@@ -1,64 +1,54 @@
 using System;
 using System.Collections.Generic;
-
-using Grasshopper;
 using Grasshopper.Kernel;
-using Rhino.Geometry;
-
-namespace DataTreeExplorer
+using Grasshopper.Kernel.Data;
+using Grasshopper.Kernel.Types;
+public override void CreateAttributes()
 {
-  public class DataTreeExplorerComponent : GH_Component
-  {
-    /// <summary>
-    /// Each implementation of GH_Component must provide a public 
-    /// constructor without any arguments.
-    /// Category represents the Tab in which the component will appear, 
-    /// Subcategory the panel. If you use non-existing tab or panel names, 
-    /// new tabs/panels will automatically be created.
-    /// </summary>
-    public DataTreeExplorerComponent()
-      : base("DataTreeExplorer Component", "Nickname",
-        "Description of component",
-        "Category", "Subcategory")
-    {
-    }
+    m_attributes = new DataTreeExplorerAttributes(this);
+}
+public class DataTreeExplorerComponent : GH_Component, IGH_VariableParameterComponent
+{
+    // Store the 'Open/Closed' state of branches
+    public List<bool> BranchStates = new List<bool>();
 
-    /// <summary>
-    /// Registers all the input parameters for this component.
-    /// </summary>
-    protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
-    {
-    }
+    // ... (Constructor and Guid go here) ...
 
-    /// <summary>
-    /// Registers all the output parameters for this component.
-    /// </summary>
-    protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
-    {
-    }
-
-    /// <summary>
-    /// This is the method that actually does the work.
-    /// </summary>
-    /// <param name="DA">The DA object can be used to retrieve data from input parameters and 
-    /// to store data in output parameters.</param>
     protected override void SolveInstance(IGH_DataAccess DA)
     {
+        GH_Structure<IGH_Goo> inputTree = new GH_Structure<IGH_Goo>();
+        if (!DA.GetDataTree(0, out inputTree)) return;
+
+        // Ensure BranchStates list matches the tree size
+        while (BranchStates.Count < inputTree.PathCount) BranchStates.Add(false);
+
+        // Sync outputs if needed
+        if (inputTree.PathCount != Params.Output.Count)
+        {
+            this.OnPingDocument().ScheduleSolution(5, (doc) => {
+                this.ExpireSolution(false);
+            });
+            return;
+        }
+
+        for (int i = 0; i < inputTree.PathCount; i++)
+        {
+            DA.SetDataList(i, inputTree.get_Branch(i));
+        }
     }
 
-    /// <summary>
-    /// Provides an Icon for every component that will be visible in the User Interface.
-    /// Icons need to be 24x24 pixels.
-    /// You can add image files to your project resources and access them like this:
-    /// return Resources.IconForThisComponent;
-    /// </summary>
-    protected override System.Drawing.Bitmap Icon => null;
-
-    /// <summary>
-    /// Each component must have a unique Guid to identify it. 
-    /// It is vital this Guid doesn't change otherwise old ghx files 
-    /// that use the old ID will partially fail during loading.
-    /// </summary>
-    public override Guid ComponentGuid => new Guid("37c26f93-839c-4bea-bd06-7975ea3da140");
-  }
+    // --- IGH_VariableParameterComponent Implementation ---
+    public bool CanInsertParameter(GH_ParameterSide side, int index) => false;
+    public bool CanRemoveParameter(GH_ParameterSide side, int index) => false;
+    public IGH_Param CreateParameter(GH_ParameterSide side, int index) => new Grasshopper.Kernel.Parameters.Param_GenericObject();
+    public bool DestroyParameter(GH_ParameterSide side, int index) => true;
+    public void VariableParameterMaintenance() 
+    { 
+        // Logic to name ports based on branch index
+        for (int i = 0; i < Params.Output.Count; i++)
+        {
+            Params.Output[i].NickName = "B" + i;
+            Params.Output[i].Name = "Branch " + i;
+        }
+    }
 }
