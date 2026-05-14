@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyDescriptionAttribute("Description of DataTreeExplorer")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0+31dd5efb813e8c3659b0289f48be03edf7b1f5a3")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0+90d4a79a0b5911ffbe6699eb17838c127b005d80")]
 [assembly: System.Reflection.AssemblyProductAttribute("DataTreeExplorer")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DataTreeExplorer")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
