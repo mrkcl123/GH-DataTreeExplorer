@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataTreeExplorer", "DataTreeExplorer.csproj", "{7D3CE154-BF83-3835-E607-210DC02FFF4E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7D3CE154-BF83-3835-E607-210DC02FFF4E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7D3CE154-BF83-3835-E607-210DC02FFF4E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7D3CE154-BF83-3835-E607-210DC02FFF4E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7D3CE154-BF83-3835-E607-210DC02FFF4E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D4747BEE-6B58-4E19-BA8E-DEB8AA233502}
+	EndGlobalSection
+EndGlobal
