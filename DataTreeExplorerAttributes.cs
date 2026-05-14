@@ -1,6 +1,9 @@
+#pragma warning disable CA1416 // Disable platform compatibility warnings for System.Drawing on non-Windows systems
+
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using Grasshopper.GUI;
 using Grasshopper.GUI.Canvas;
 using Grasshopper.Kernel;
@@ -19,25 +22,21 @@ namespace DataTreeExplorer
 
         public DataTreeExplorerAttributes(DataTreeExplorerComponent owner) : base(owner) { }
 
-        // Object representing anything we draw in our file explorer list
         private class UIElement
         {
-            public bool IsFolder;       // True = Directory node (e.g. {0}), False = Data branch or raw data item
-            public bool IsDataLeaf;     // True = The final end branch containing items (e.g. {0;1})
-            public string Label;        // Text displayed (e.g. "0", "{0;1}", or "[0] Line")
-            public string NodeKey;      // Unique structural key (e.g. "{0}" or "{0;1}")
-            public int Indent;          // Hierarchy depth multiplier
-            public int BranchIndex = -1;// Matches the physical GH output param if a leaf node
-            public int ItemCount;       // Total sub-items inside
+            public bool IsHeaderGroup;  
+            public bool IsDataLeaf;     
+            public string Label;        
+            public string RightLabel;   
+            public string NodeKey;      
+            public int Indent;          
+            public int BranchIndex = -1;
         }
 
-        // Internal tree node representation for path sorting
-        private class PathNode
+        private class FolderGroup
         {
-            public string Name;
-            public string FullKey;
-            public int BranchIndex = -1;
-            public Dictionary<string, PathNode> SubFolders = new Dictionary<string, PathNode>();
+            public string Key;
+            public List<int> LeafBranchIndices = new List<int>();
         }
 
         private void RegenerateTreeLayout()
@@ -45,86 +44,114 @@ namespace DataTreeExplorer
             _visibleElements.Clear();
             if (Owner.CurrentPaths == null || Owner.CurrentPaths.Count == 0) return;
 
-            // 1. Construct an internal directory system
-            PathNode rootNode = new PathNode { Name = "Root", FullKey = "Root" };
-            
+            var groups = new Dictionary<string, FolderGroup>();
+            var standaloneLeaves = new List<int>();
+
             for (int i = 0; i < Owner.CurrentPaths.Count; i++)
             {
                 GH_Path path = Owner.CurrentPaths[i];
-                PathNode current = rootNode;
-                string structuredKey = "";
-
-                for (int j = 0; j < path.Length; j++)
+                
+                if (path.Length > 1)
                 {
-                    string indexStr = path.Indices[j].ToString();
-                    structuredKey = j == 0 ? $"{{{indexStr}}}" : structuredKey.TrimEnd('}') + ";" + indexStr + "}";
-
-                    if (!current.SubFolders.ContainsKey(indexStr))
+                    List<string> parentParts = new List<string>();
+                    for (int j = 0; j < path.Length - 1; j++)
                     {
-                        current.SubFolders[indexStr] = new PathNode { Name = indexStr, FullKey = structuredKey };
+                        parentParts.Add(path.Indices[j].ToString());
                     }
-                    current = current.SubFolders[indexStr];
+                    string groupKey = string.Join(";", parentParts);
+
+                    if (!groups.ContainsKey(groupKey))
+                    {
+                        groups[groupKey] = new FolderGroup { Key = groupKey };
+                    }
+                    groups[groupKey].LeafBranchIndices.Add(i);
                 }
-                current.BranchIndex = i; // Mark this folder node as an actual data holder leaf
+                else
+                {
+                    standaloneLeaves.Add(i);
+                }
             }
 
-            // 2. Flatten out the tree system sequentially based on expansion rules
-            FlattenNode(rootNode, 0);
+            // FIX: Renamed "[Root Branches]" to unified style "[X]"
+            if (standaloneLeaves.Count > 0)
+            {
+                _visibleElements.Add(new UIElement
+                {
+                    IsHeaderGroup = true,
+                    IsDataLeaf = false,
+                    Label = "[X]",
+                    RightLabel = $"{standaloneLeaves.Count} {(standaloneLeaves.Count == 1 ? "Branch" : "Branches")}",
+                    NodeKey = "heading_standalone_root",
+                    Indent = 0
+                });
+
+                foreach (int idx in standaloneLeaves.OrderBy(idx => Owner.CurrentPaths[idx]))
+                {
+                    AddDataLeafToUI(idx, 1); 
+                }
+            }
+
+            // Deep Groups
+            foreach (var group in groups.Values.OrderBy(g => g.Key))
+            {
+                int branchCount = group.LeafBranchIndices.Count;
+                string headingLabel = $"[{group.Key};X]";
+                string headingRightLabel = $"{branchCount} {(branchCount == 1 ? "Branch" : "Branches")}";
+
+                _visibleElements.Add(new UIElement
+                {
+                    IsHeaderGroup = true,
+                    IsDataLeaf = false,
+                    Label = headingLabel,
+                    RightLabel = headingRightLabel,
+                    NodeKey = "heading_" + group.Key,
+                    Indent = 0
+                });
+
+                var sortedIndices = group.LeafBranchIndices.OrderBy(idx => Owner.CurrentPaths[idx]).ToList();
+                foreach (int idx in sortedIndices)
+                {
+                    AddDataLeafToUI(idx, 1);
+                }
+            }
         }
 
-        private void FlattenNode(PathNode node, int currentIndent)
+        private void AddDataLeafToUI(int branchIndex, int indentLevel)
         {
-            // Skip rendering the dummy root wrapper directly, dive straight into children
-            if (node.FullKey == "Root")
-            {
-                foreach (var child in node.SubFolders.Values) FlattenNode(child, currentIndent);
-                return;
-            }
-
-            bool isOpen = Owner.ExpandedFolders.Contains(node.FullKey);
-            bool isDataLeaf = node.BranchIndex != -1;
-            bool isFolder = node.SubFolders.Count > 0;
-
-            int itemsInBranch = 0;
-            if (isDataLeaf) itemsInBranch = Owner.CurrentTree.Branches[node.BranchIndex].Count;
+            GH_Path path = Owner.CurrentPaths[branchIndex];
+            string pathKey = path.ToString();
+            bool isLeafOpen = Owner.ExpandedFolders.Contains(pathKey);
+            int itemsInBranch = Owner.CurrentTree.Branches[branchIndex].Count;
+            string itemsText = itemsInBranch == 1 ? "1 Item" : $"{itemsInBranch} Items";
 
             _visibleElements.Add(new UIElement
             {
-                IsFolder = isFolder || isDataLeaf,
-                IsDataLeaf = isDataLeaf,
-                Label = isDataLeaf ? node.FullKey : node.Name,
-                NodeKey = node.FullKey,
-                Indent = currentIndent,
-                BranchIndex = node.BranchIndex,
-                ItemCount = itemsInBranch
+                IsHeaderGroup = false,
+                IsDataLeaf = true,
+                Label = pathKey,
+                RightLabel = itemsText,
+                NodeKey = pathKey,
+                Indent = indentLevel,
+                BranchIndex = branchIndex
             });
 
-            if (isOpen)
+            if (isLeafOpen && itemsInBranch > 0)
             {
-                // Render nested sub-folders first
-                foreach (var child in node.SubFolders.Values)
+                var branchList = Owner.CurrentTree.Branches[branchIndex];
+                for (int j = 0; j < branchList.Count; j++)
                 {
-                    FlattenNode(child, currentIndent + 1);
-                }
+                    string preview = branchList[j] != null ? branchList[j].ToString() : "null";
+                    if (preview.Length > 40) preview = preview.Substring(0, 37) + "...";
 
-                // If this specific node also explicitly carries raw list elements, inject item previews
-                if (isDataLeaf)
-                {
-                    var branchList = Owner.CurrentTree.Branches[node.BranchIndex];
-                    for (int j = 0; j < branchList.Count; j++)
+                    _visibleElements.Add(new UIElement
                     {
-                        string preview = branchList[j] != null ? branchList[j].ToString() : "null";
-                        if (preview.Length > 40) preview = preview.Substring(0, 37) + "...";
-
-                        _visibleElements.Add(new UIElement
-                        {
-                            IsFolder = false,
-                            IsDataLeaf = false,
-                            Label = $"[{j}] {preview}",
-                            NodeKey = node.FullKey + $"_item_{j}",
-                            Indent = currentIndent + 1
-                        });
-                    }
+                        IsHeaderGroup = false,
+                        IsDataLeaf = false,
+                        Label = $"[{j}] {preview}",
+                        RightLabel = string.Empty,
+                        NodeKey = pathKey + $"_item_{j}",
+                        Indent = indentLevel + 1
+                    });
                 }
             }
         }
@@ -137,7 +164,7 @@ namespace DataTreeExplorer
             float extraHeight = _visibleElements.Count * _rowHeight;
             
             RectangleF rec = Bounds;
-            rec.Width = 200f; // Extra width to hold deeper indent variations comfortably
+            rec.Width = 240f; 
             rec.Height = _contentStartY + extraHeight; 
             Bounds = rec;
 
@@ -151,7 +178,6 @@ namespace DataTreeExplorer
                 inputParam.Attributes.Bounds = new RectangleF(Bounds.Left, Bounds.Y + 50f, 10, _rowHeight);
             }
 
-            // Sync physical connection knots only to nodes representing true final branch paths
             float currentY = Bounds.Y + _contentStartY;
             foreach (var element in _visibleElements)
             {
@@ -193,6 +219,7 @@ namespace DataTreeExplorer
                 graphics.DrawLine(Pens.LightGray, Bounds.X + 5, Bounds.Y + _contentStartY - 2, Bounds.Right - 5, Bounds.Y + _contentStartY - 2);
 
                 float currentY = Bounds.Y + _contentStartY;
+                Color darkGray = Color.FromArgb(64, 64, 64);
                 
                 for (int i = 0; i < _visibleElements.Count; i++)
                 {
@@ -200,30 +227,37 @@ namespace DataTreeExplorer
                     float indentOffset = element.Indent * 14f;
                     RectangleF rowRect = new RectangleF(Bounds.X + 5 + indentOffset, currentY, Bounds.Width - 10 - indentOffset, _rowHeight);
 
-                    if (element.IsFolder)
+                    StringFormat leftAlign = new StringFormat { Alignment = StringAlignment.Near, LineAlignment = StringAlignment.Center };
+                    StringFormat rightAlign = new StringFormat { Alignment = StringAlignment.Far, LineAlignment = StringAlignment.Center };
+                    RectangleF rightLabelRect = new RectangleF(Bounds.X + 5, rowRect.Y, Bounds.Width - 15, _rowHeight);
+
+                    if (element.IsHeaderGroup)
                     {
-                        bool isFolderOpen = Owner.ExpandedFolders.Contains(element.NodeKey);
-                        PointF[] chevron = GetChevronPoints(rowRect.X + 4, rowRect.Y + 6, isFolderOpen);
-                        graphics.FillPolygon(Brushes.Black, chevron);
-
-                        StringFormat leftAlign = new StringFormat { Alignment = StringAlignment.Near, LineAlignment = StringAlignment.Center };
-                        RectangleF textRect = new RectangleF(rowRect.X + 16, rowRect.Y, Bounds.Width - 100, _rowHeight);
-                        
-                        // Bold folder headers vs regular branch endpoints
-                        Font labelFont = element.IsDataLeaf ? GH_FontServer.Standard : GH_FontServer.StandardBold;
-                        graphics.DrawString(element.Label, labelFont, Brushes.Black, textRect, leftAlign);
-
-                        if (element.IsDataLeaf)
+                        RectangleF textRect = new RectangleF(rowRect.X, rowRect.Y, Bounds.Width - 110, _rowHeight);
+                        using (Brush brush = new SolidBrush(darkGray))
                         {
-                            StringFormat rightAlign = new StringFormat { Alignment = StringAlignment.Far, LineAlignment = StringAlignment.Center };
-                            RectangleF countLabelRect = new RectangleF(Bounds.X + 5, rowRect.Y, Bounds.Width - 15, _rowHeight);
-                            string text = element.ItemCount == 1 ? "1 Item" : $"{element.ItemCount} Items";
-                            graphics.DrawString(text, GH_FontServer.StandardItalic, Brushes.Gray, countLabelRect, rightAlign);
+                            graphics.DrawString(element.Label, GH_FontServer.StandardBold, brush, textRect, leftAlign);
+                            graphics.DrawString(element.RightLabel, GH_FontServer.StandardItalic, brush, rightLabelRect, rightAlign);
                         }
+                    }
+                    else if (element.IsDataLeaf)
+                    {
+                        bool isOpen = Owner.ExpandedFolders.Contains(element.NodeKey);
+                        int branchIndex = element.BranchIndex;
+                        int itemsCount = Owner.CurrentTree.Branches[branchIndex].Count;
+
+                        if (itemsCount > 0)
+                        {
+                            PointF[] chevron = GetChevronPoints(rowRect.X + 4, rowRect.Y + 6, isOpen);
+                            graphics.FillPolygon(Brushes.Black, chevron);
+                        }
+
+                        RectangleF textRect = new RectangleF(rowRect.X + 16, rowRect.Y, Bounds.Width - 110, _rowHeight);
+                        graphics.DrawString(element.Label, GH_FontServer.Standard, Brushes.Black, textRect, leftAlign);
+                        graphics.DrawString(element.RightLabel, GH_FontServer.StandardItalic, Brushes.Gray, rightLabelRect, rightAlign);
                     }
                     else
                     {
-                        // Indented primitive raw list objects
                         graphics.DrawString(element.Label, GH_FontServer.StandardItalic, Brushes.Gray, rowRect.X + 4, rowRect.Y + 3);
                     }
 
@@ -242,7 +276,7 @@ namespace DataTreeExplorer
                     var element = _visibleElements[i];
                     RectangleF hitBox = new RectangleF(Bounds.X, currentY, Bounds.Width, _rowHeight);
 
-                    if (hitBox.Contains(e.CanvasLocation) && element.IsFolder)
+                    if (hitBox.Contains(e.CanvasLocation) && element.IsDataLeaf && Owner.CurrentTree.Branches[element.BranchIndex].Count > 0)
                     {
                         if (Owner.ExpandedFolders.Contains(element.NodeKey))
                             Owner.ExpandedFolders.Remove(element.NodeKey);

@@ -8,8 +8,7 @@ namespace DataTreeExplorer
 {
     public class DataTreeExplorerComponent : GH_Component, IGH_VariableParameterComponent
     {
-        // Tracks expanded folder strings (e.g., "Root", "{0}", "{0;1}")
-        public HashSet<string> ExpandedFolders = new HashSet<string> { "Root" };
+        public HashSet<string> ExpandedFolders = new HashSet<string>();
         public List<GH_Path> CurrentPaths = new List<GH_Path>();
         public GH_Structure<IGH_Goo> CurrentTree = new GH_Structure<IGH_Goo>();
 
@@ -40,8 +39,6 @@ namespace DataTreeExplorer
             {
                 CurrentPaths.Clear();
                 CurrentTree.Clear();
-                ExpandedFolders.Clear();
-                ExpandedFolders.Add("Root");
                 
                 if (Params.Output.Count > 0)
                 {
@@ -61,10 +58,28 @@ namespace DataTreeExplorer
                 this.ExpireSolution(false);
             });
 
-            // Keep physical outputs aligned with the real data branches
+            // FIX: Create a pristine structure container for each parameter to completely wipe out default {0} branches
             for (int i = 0; i < Math.Min(Params.Output.Count, inputTree.PathCount); i++)
             {
-                DA.SetDataList(i, inputTree.get_Branch(i));
+                var targetParam = Params.Output[i];
+                targetParam.ClearData(); 
+
+                GH_Path originalPath = inputTree.Paths[i];
+                System.Collections.IList branchData = inputTree.Branches[i];
+                
+                // Construct a brand new structure container
+                GH_Structure<IGH_Goo> cleanStructure = new GH_Structure<IGH_Goo>();
+                
+                foreach (var gooItem in branchData)
+                {
+                    if (gooItem is IGH_Goo typedGoo)
+                    {
+                        cleanStructure.Append(typedGoo, originalPath);
+                    }
+                }
+
+                // Completely swap out the parameter's volatile cache with our clean structure
+                targetParam.AddVolatileDataTree(cleanStructure);
             }
         }
 
@@ -89,7 +104,7 @@ namespace DataTreeExplorer
                 string pathString = CurrentPaths[i].ToString();
                 Params.Output[i].NickName = pathString;
                 Params.Output[i].Name = "Branch " + pathString;
-                Params.Output[i].Access = GH_ParamAccess.list;
+                Params.Output[i].Access = GH_ParamAccess.tree; // Set to tree access so it accommodates custom structures perfectly
                 if (Params.Output[i].Attributes == null) Params.Output[i].CreateAttributes();
             }
             
