@@ -1,0 +1,1 @@
+ The Grasshopper Data Tree Explorer Component is a dynamic Grasshopper Component for Rhino Grasshopper which works like a collapsable file explorer for Grasshopper Data Trees, making it more easy to inspect data logic & flow in Rhinos Grasshopper visual coding enviroment. 
