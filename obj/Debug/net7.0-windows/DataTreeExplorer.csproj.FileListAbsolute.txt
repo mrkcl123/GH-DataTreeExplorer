@@ -4,3 +4,12 @@
 /Users/mirekclassen/DataTreeExplorer/obj/Debug/net7.0-windows/DataTreeExplorer.AssemblyInfo.cs
 /Users/mirekclassen/DataTreeExplorer/obj/Debug/net7.0-windows/DataTreeExplorer.csproj.CoreCompileInputs.cache
 /Users/mirekclassen/DataTreeExplorer/obj/Debug/net7.0-windows/DataTreeExplorer.sourcelink.json
+/Users/mirekclassen/DataTreeExplorer/bin/Debug/net7.0-windows/DataTreeExplorer.deps.json
+/Users/mirekclassen/DataTreeExplorer/bin/Debug/net7.0-windows/DataTreeExplorer.runtimeconfig.json
+/Users/mirekclassen/DataTreeExplorer/bin/Debug/net7.0-windows/DataTreeExplorer.gha
+/Users/mirekclassen/DataTreeExplorer/bin/Debug/net7.0-windows/DataTreeExplorer.pdb
+/Users/mirekclassen/DataTreeExplorer/obj/Debug/net7.0-windows/DataTreeExplorer.gha
+/Users/mirekclassen/DataTreeExplorer/obj/Debug/net7.0-windows/refint/DataTreeExplorer.gha
+/Users/mirekclassen/DataTreeExplorer/obj/Debug/net7.0-windows/DataTreeExplorer.pdb
+/Users/mirekclassen/DataTreeExplorer/obj/Debug/net7.0-windows/DataTreeExplorer.genruntimeconfig.cache
+/Users/mirekclassen/DataTreeExplorer/obj/Debug/net7.0-windows/ref/DataTreeExplorer.gha

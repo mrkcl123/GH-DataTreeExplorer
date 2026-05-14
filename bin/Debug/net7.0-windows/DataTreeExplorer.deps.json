@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v7.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v7.0": {
+      "DataTreeExplorer/1.0": {
+        "runtime": {
+          "DataTreeExplorer.gha": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "DataTreeExplorer/1.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

@@ -4,3 +4,7 @@
 /Users/mirekclassen/DataTreeExplorer/obj/Debug/net48/DataTreeExplorer.AssemblyInfo.cs
 /Users/mirekclassen/DataTreeExplorer/obj/Debug/net48/DataTreeExplorer.csproj.CoreCompileInputs.cache
 /Users/mirekclassen/DataTreeExplorer/obj/Debug/net48/DataTreeExplorer.sourcelink.json
+/Users/mirekclassen/DataTreeExplorer/bin/Debug/net48/DataTreeExplorer.gha
+/Users/mirekclassen/DataTreeExplorer/bin/Debug/net48/DataTreeExplorer.pdb
+/Users/mirekclassen/DataTreeExplorer/obj/Debug/net48/DataTreeExplorer.gha
+/Users/mirekclassen/DataTreeExplorer/obj/Debug/net48/DataTreeExplorer.pdb
